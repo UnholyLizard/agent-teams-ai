@@ -28,6 +28,7 @@ export function canRunExternalAgent(
   )
     return false;
   if (provider.providerId === 'codex') return codexLaunchAllowed === true;
+  if (provider.providerId === 'gemini') return true;
   return (
     provider.providerId === 'anthropic' &&
     (!provider.resolvedBackendId ||

@@ -15,29 +15,71 @@ export interface ConfiguredMcpEntry extends InstalledMcpEntry {
 }
 
 export class McpConfigStateReader {
-  async readInstalled(projectPath?: string): Promise<InstalledMcpEntry[]> {
+  async readInstalled(
+    projectPath?: string,
+    options?: { includeAgy?: boolean }
+  ): Promise<InstalledMcpEntry[]> {
     const entries: InstalledMcpEntry[] = [];
     const claudeConfig = await this.readClaudeConfig();
 
     entries.push(...this.readUserMcpServers(claudeConfig));
 
+    if (options?.includeAgy) {
+      const agyUserEntries = await this.readAgyUserMcpServers();
+      for (const agyEntry of agyUserEntries) {
+        if (!entries.some((e) => e.name.toLowerCase() === agyEntry.name.toLowerCase())) {
+          entries.push(agyEntry);
+        }
+      }
+    }
+
     if (projectPath) {
       entries.push(...this.readLocalMcpServers(claudeConfig, projectPath));
       entries.push(...(await this.readProjectMcpServers(projectPath)));
+
+      if (options?.includeAgy) {
+        const agyProjectEntries = await this.readAgyProjectMcpServers(projectPath);
+        for (const agyEntry of agyProjectEntries) {
+          if (!entries.some((e) => e.name.toLowerCase() === agyEntry.name.toLowerCase())) {
+            entries.push(agyEntry);
+          }
+        }
+      }
     }
 
     return entries;
   }
 
-  async readConfigured(projectPath?: string): Promise<ConfiguredMcpEntry[]> {
+  async readConfigured(
+    projectPath?: string,
+    options?: { includeAgy?: boolean }
+  ): Promise<ConfiguredMcpEntry[]> {
     const entries: ConfiguredMcpEntry[] = [];
     const claudeConfig = await this.readClaudeConfig();
 
     entries.push(...this.readConfiguredMcpServersFromConfig(claudeConfig?.mcpServers, 'user'));
 
+    if (options?.includeAgy) {
+      const agyUserEntries = await this.readAgyUserConfiguredMcpServers();
+      for (const agyEntry of agyUserEntries) {
+        if (!entries.some((e) => e.name.toLowerCase() === agyEntry.name.toLowerCase())) {
+          entries.push(agyEntry);
+        }
+      }
+    }
+
     if (projectPath) {
       entries.push(...this.readLocalConfiguredMcpServers(claudeConfig, projectPath));
       entries.push(...(await this.readProjectConfiguredMcpServers(projectPath)));
+
+      if (options?.includeAgy) {
+        const agyProjectEntries = await this.readAgyProjectConfiguredMcpServers(projectPath);
+        for (const agyEntry of agyProjectEntries) {
+          if (!entries.some((e) => e.name.toLowerCase() === agyEntry.name.toLowerCase())) {
+            entries.push(agyEntry);
+          }
+        }
+      }
     }
 
     return entries;
@@ -124,7 +166,8 @@ export class McpConfigStateReader {
       .map(([name, config]): ConfiguredMcpEntry => {
         let transport: string | undefined;
         if (typeof config.command === 'string') transport = 'stdio';
-        else if (typeof config.url === 'string') transport = 'http';
+        else if (typeof config.url === 'string' || typeof config.serverUrl === 'string')
+          transport = 'http';
 
         let targetKey: string | undefined;
         if (
@@ -136,8 +179,14 @@ export class McpConfigStateReader {
           typeof config.args[1] === 'string'
         ) {
           targetKey = getMcpRuntimeTargetKey(`npx -y ${config.args[1]}`, transport) ?? undefined;
-        } else if (transport === 'http' && typeof config.url === 'string') {
-          targetKey = getMcpRuntimeTargetKey(config.url, transport) ?? undefined;
+        } else if (
+          transport === 'http' &&
+          (typeof config.url === 'string' || typeof config.serverUrl === 'string')
+        ) {
+          const urlString = (
+            typeof config.url === 'string' ? config.url : config.serverUrl
+          ) as string;
+          targetKey = getMcpRuntimeTargetKey(urlString, transport) ?? undefined;
         }
 
         return { name, scope, transport, targetKey, config: { ...config } };
@@ -168,5 +217,33 @@ export class McpConfigStateReader {
       logger.error(`Failed to read MCP servers from ${filePath}:`, err);
       return [];
     }
+  }
+
+  private async readAgyUserMcpServers(): Promise<InstalledMcpEntry[]> {
+    return (await this.readAgyUserConfiguredMcpServers()).map(
+      ({ config: _config, ...entry }) => entry
+    );
+  }
+
+  private async readAgyProjectMcpServers(projectPath: string): Promise<InstalledMcpEntry[]> {
+    return (await this.readAgyProjectConfiguredMcpServers(projectPath)).map(
+      ({ config: _config, ...entry }) => entry
+    );
+  }
+
+  private async readAgyUserConfiguredMcpServers(): Promise<ConfiguredMcpEntry[]> {
+    const globalConfigPath = path.join(getHomeDir(), '.gemini', 'config', 'mcp_config.json');
+    const entries = await this.readConfiguredMcpServersFromFile(globalConfigPath, 'user');
+    if (entries.length > 0) return entries;
+
+    const ideConfigPath = path.join(getHomeDir(), '.gemini', 'antigravity-ide', 'mcp_config.json');
+    return this.readConfiguredMcpServersFromFile(ideConfigPath, 'user');
+  }
+
+  private async readAgyProjectConfiguredMcpServers(
+    projectPath: string
+  ): Promise<ConfiguredMcpEntry[]> {
+    const projectConfigPath = path.join(projectPath, '.agents', 'mcp_config.json');
+    return this.readConfiguredMcpServersFromFile(projectConfigPath, 'project');
   }
 }

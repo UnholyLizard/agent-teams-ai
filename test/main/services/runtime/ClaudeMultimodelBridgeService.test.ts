@@ -83,7 +83,8 @@ vi.mock('@main/utils/directoryPresence', async (importOriginal) => ({
   isMissingDirectory: (directoryPath: string) => isMissingDirectoryMock(directoryPath),
 }));
 
-vi.mock('@main/utils/shellEnv', () => ({
+vi.mock('@main/utils/shellEnv', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/shellEnv')>()),
   resolveInteractiveShellEnv: () => resolveInteractiveShellEnvMock(),
   resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvMock(),
 }));
@@ -943,7 +944,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     const gemini = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'gemini');
     expect(gemini).toMatchObject({
       providerId: 'gemini',
-      displayName: 'Gemini',
+      displayName: 'Antigravity / Gemini',
       supported: false,
       authenticated: false,
       models: [],

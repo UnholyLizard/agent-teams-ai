@@ -19,12 +19,26 @@ const USER_ROOTS: { rootKind: SkillRootKind; segments: string[] }[] = SKILL_ROOT
   })
 );
 
+const USER_EXTRA_ROOTS: { rootKind: SkillRootKind; segments: string[] }[] = [
+  { rootKind: 'gemini', segments: ['.gemini', 'config', 'skills'] },
+  { rootKind: 'gemini', segments: ['.gemini', 'antigravity-ide', 'builtin', 'skills'] },
+];
+
 export class SkillRootsResolver {
   resolve(projectPath?: string): ResolvedSkillRoot[] {
     const roots: ResolvedSkillRoot[] = [];
     const homeDir = getHomeDir();
 
     for (const def of USER_ROOTS) {
+      roots.push({
+        scope: 'user',
+        rootKind: def.rootKind,
+        projectRoot: null,
+        rootPath: path.join(homeDir, ...def.segments),
+      });
+    }
+
+    for (const def of USER_EXTRA_ROOTS) {
       roots.push({
         scope: 'user',
         rootKind: def.rootKind,

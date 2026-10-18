@@ -46,7 +46,7 @@ export interface ExternalAgentConnectionApi {
   directRun?: ExternalAgentRunApi;
 }
 
-export type ExternalAgentRunProvider = 'anthropic' | 'codex';
+export type ExternalAgentRunProvider = 'anthropic' | 'codex' | 'agy';
 export type ExternalAgentRunAvailability = Record<ExternalAgentRunProvider, boolean>;
 export type ExternalAgentRunStatus = 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
 /** Maximum raw task length accepted by native run admission, before trimming. */

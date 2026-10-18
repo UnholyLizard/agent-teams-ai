@@ -773,6 +773,12 @@ export const MCP_REGISTRY_INSTALL_CUSTOM = 'mcpRegistry:installCustom';
 /** Fetch GitHub stars for MCP server repositories */
 export const MCP_GITHUB_STARS = 'mcpRegistry:githubStars';
 
+/** Synchronize MCP servers between app and AGY ecosystem */
+export const MCP_AGY_SYNC = 'mcp:agySync';
+
+/** List AGY ecosystem MCP servers */
+export const MCP_AGY_LIST = 'mcp:agyList';
+
 // =============================================================================
 // Extensions / Skills Channels
 // =============================================================================

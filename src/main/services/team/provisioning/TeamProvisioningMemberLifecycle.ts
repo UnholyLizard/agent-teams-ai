@@ -25,7 +25,10 @@ import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropi
 import { mergeJsonSettingsArgs } from '../../runtime/cliSettingsArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
-import { buildNativeAppManagedBootstrapSpecs } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import {
+  buildNativeAppManagedBootstrapSpecs,
+  isNativeAppManagedBootstrapProvider,
+} from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
 import { getConfiguredCliFlavor } from '../cliFlavor';
 import { sanitizeProcessRuntimeEventFilePrefix } from '../ProcessBootstrapTransportEvidence';
@@ -1176,7 +1179,7 @@ export class TeamProvisioningMemberLifecycleController {
     bootstrapProofToken: string;
     spec: NativeAppManagedBootstrapSpec | null;
   }): Promise<Record<string, string>> {
-    if (!input.spec || (input.providerId !== 'anthropic' && input.providerId !== 'codex')) {
+    if (!input.spec || !isNativeAppManagedBootstrapProvider(input.providerId)) {
       return {};
     }
     const context = {

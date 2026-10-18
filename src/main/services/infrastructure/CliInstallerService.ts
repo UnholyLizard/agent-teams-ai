@@ -68,6 +68,10 @@ import {
   projectStatusAuthority,
   resolvePassiveProviderRuntime,
 } from './cliInstallerStatusAuthority';
+import {
+  enrichGeminiProviderStatus,
+  enrichProviderStatusesSync,
+} from './geminiProviderStatusEnricher';
 
 import type {
   CliInstallationStatus,
@@ -907,14 +911,16 @@ export class CliInstallerService {
           handleCatalogUpdate
         );
     if (generation !== this.statusGatherGeneration) return obsoleteStatus();
-    const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
+    const enrichedStatus = await enrichGeminiProviderStatus(providerStatus);
+    const resolvedStatus = enrichedStatus ?? providerStatus;
+    const mismatchStatus = projectMismatchedProviderStatus(providerId, resolvedStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;
     }
     if (!options.projectPath) {
-      this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
+      this.updateLatestProviderStatusIfCurrent(resolvedStatus, generation);
     }
-    return projectProviderAuthority(providerStatus, this.now());
+    return projectProviderAuthority(resolvedStatus, this.now());
   }
 
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
@@ -1232,7 +1238,7 @@ export class CliInstallerService {
           return;
         }
         const publication = mergeProviderStatusPublication(
-          providersSnapshot,
+          enrichProviderStatusesSync(providersSnapshot),
           this.latestStatusSnapshot?.providers ?? result.providers,
           hydratedProviderIds,
           final,

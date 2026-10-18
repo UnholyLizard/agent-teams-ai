@@ -17,7 +17,7 @@ export class SkillScaffoldService {
     folderName: string,
     existingSkillId?: string
   ): Promise<string> {
-    const root = this.resolveWritableRoot(scope, rootKind, projectPath);
+    const root = this.resolveWritableRoot(scope, rootKind, projectPath, existingSkillId);
     await fs.mkdir(root.rootPath, { recursive: true });
 
     const folderValidation = validateFileName(folderName);
@@ -50,8 +50,25 @@ export class SkillScaffoldService {
     }
   }
 
-  private resolveWritableRoot(scope: SkillScope, rootKind: SkillRootKind, projectPath?: string) {
+  private resolveWritableRoot(
+    scope: SkillScope,
+    rootKind: SkillRootKind,
+    projectPath?: string,
+    existingSkillId?: string
+  ) {
     const roots = this.rootsResolver.resolve(projectPath);
+    if (existingSkillId) {
+      const resolvedExisting = path.resolve(existingSkillId);
+      const matchingRoot = roots.find(
+        (root) =>
+          root.scope === scope &&
+          root.rootKind === rootKind &&
+          isPathWithinRoot(resolvedExisting, root.rootPath)
+      );
+      if (matchingRoot) {
+        return matchingRoot;
+      }
+    }
     const match = roots.find((root) => root.scope === scope && root.rootKind === rootKind);
     if (!match) {
       throw new Error('Requested skill root is unavailable');

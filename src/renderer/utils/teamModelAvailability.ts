@@ -787,11 +787,16 @@ export function getAvailableTeamProviderModelOptions(
     }));
   }
 
-  if (!providerStatus) {
+  if (!providerStatus && providerId !== 'gemini') {
     return [{ value: '', label: 'Default', badgeLabel: 'Default' }];
   }
-
-  if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
+  const geminiNeedsFallback =
+    providerId === 'gemini' && (!providerStatus?.models || providerStatus.models.length === 0);
+  if (
+    !providerStatus ||
+    isTeamProviderModelVerificationPending(providerId, providerStatus) ||
+    geminiNeedsFallback
+  ) {
     return getFallbackTeamProviderModelOptions(providerId, providerStatus);
   }
 

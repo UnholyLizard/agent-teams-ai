@@ -753,4 +753,48 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       '--inherit',
     ]);
   });
+
+  it('builds deterministic launch process args for gemini provider with resolved default model and effort', () => {
+    const geminiLaunchIdentity: ProviderModelLaunchIdentity = {
+      providerId: 'gemini',
+      providerBackendId: null,
+      billingMode: 'api',
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'gemini-2.5-pro',
+      catalogId: 'gemini-2.5-pro',
+      catalogSource: 'runtime',
+      catalogFetchedAt: null,
+      selectedEffort: 'medium',
+      resolvedEffort: 'medium',
+    };
+
+    const args = buildDeterministicLaunchProcessArgs({
+      mcpConfigPath,
+      bootstrapSpecPath,
+      bootstrapUserPromptPath,
+      skipPermissions: true,
+      worktree: undefined,
+      providerId: 'gemini',
+      model: undefined,
+      launchIdentity: geminiLaunchIdentity,
+      runtimeArgsPlan: {
+        providerArgs: [],
+        fastModeArgs: [],
+        runtimeTurnSettledHookArgs: [],
+        extraArgs: [],
+        settingsArgs: [],
+        inheritedProviderArgs: [],
+        appManagedSettingsPath: null,
+      },
+      teammateModeDecision: { injectedTeammateMode: null },
+      disallowedTools: '',
+    });
+
+    expect(args).toContain('--model');
+    expect(args[args.indexOf('--model') + 1]).toBe('gemini-2.5-pro');
+    expect(args).toContain('--effort');
+    expect(args[args.indexOf('--effort') + 1]).toBe('medium');
+    expect(args).toContain('--dangerously-skip-permissions');
+  });
 });

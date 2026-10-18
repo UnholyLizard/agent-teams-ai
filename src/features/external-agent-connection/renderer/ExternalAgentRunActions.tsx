@@ -64,6 +64,17 @@ export function ExternalAgentRunActions({
           <ProviderBrandLogo providerId="anthropic" className="size-4 shrink-0" />
           {t('externalPrompt.runClaude')}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={blocked || !run.agyReady}
+          onClick={() => void run.start('agy')}
+          data-testid="external-agent-run-agy"
+        >
+          <ProviderBrandLogo providerId="gemini" className="size-4 shrink-0" />
+          {t('externalPrompt.runAgy')}
+        </Button>
         {run.active && (
           <Button
             type="button"
@@ -90,6 +101,11 @@ export function ExternalAgentRunActions({
               ? 'externalPrompt.runClaudeNotReady'
               : 'externalPrompt.runClaudeMissing'
           )}
+        </p>
+      )}
+      {!run.agyReady && (
+        <p className="text-xs text-[var(--color-text-muted)]">
+          {t(run.agyDetected ? 'externalPrompt.runAgyNotReady' : 'externalPrompt.runAgyMissing')}
         </p>
       )}
       {run.snapshot && (

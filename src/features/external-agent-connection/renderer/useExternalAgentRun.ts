@@ -35,6 +35,7 @@ export function useExternalAgentRun(
   const actionPending = useRef(false);
   const codex = useEffectiveCliProviderStatus('codex');
   const claude = useEffectiveCliProviderStatus('anthropic');
+  const gemini = useEffectiveCliProviderStatus('gemini');
   const fetchStatus = useStore((state) => state.fetchCliProviderStatus);
   const boundContext = useMemo(
     () => ({
@@ -53,7 +54,13 @@ export function useExternalAgentRun(
   const snapshotUnknown = error === 'snapshot';
   const codexAuthority = !codex.codexSnapshotPending && canRunExternalAgent(codex.providerStatus);
   const claudeAuthority = canRunExternalAgent(claude.providerStatus);
-  const availabilityScope = JSON.stringify([boundContext, codexAuthority, claudeAuthority]);
+  const agyAuthority = canRunExternalAgent(gemini.providerStatus);
+  const availabilityScope = JSON.stringify([
+    boundContext,
+    codexAuthority,
+    claudeAuthority,
+    agyAuthority,
+  ]);
   const availability =
     nativeAvailability?.api === api && nativeAvailability.scope === availabilityScope
       ? nativeAvailability.values
@@ -77,6 +84,7 @@ export function useExternalAgentRun(
   useEffect(() => {
     void fetchStatus('codex');
     void fetchStatus('anthropic');
+    void fetchStatus('gemini');
   }, [fetchStatus]);
 
   const read = useCallback(async () => {
@@ -120,13 +128,19 @@ export function useExternalAgentRun(
   }, [active, loading, read, snapshotUnknown]);
 
   const start = async (providerId: ExternalAgentRunProvider) => {
+    const authority =
+      providerId === 'codex'
+        ? codexAuthority
+        : providerId === 'agy'
+          ? agyAuthority
+          : claudeAuthority;
     if (
       actionPending.current ||
       active ||
       loading ||
       snapshotUnknown ||
       !availability?.[providerId] ||
-      !(providerId === 'codex' ? codexAuthority : claudeAuthority)
+      !authority
     )
       return;
     actionPending.current = true;
@@ -192,9 +206,11 @@ export function useExternalAgentRun(
       : 0,
     codexReady: availability?.codex === true && codexAuthority,
     claudeReady: availability?.anthropic === true && claudeAuthority,
+    agyReady: availability?.agy === true && agyAuthority,
     codexDetected: availability ? availability.codex : codex.providerStatus?.supported === true,
     claudeDetected: availability
       ? availability.anthropic
       : claude.providerStatus?.supported === true,
+    agyDetected: availability ? availability.agy : gemini.providerStatus?.supported === true,
   };
 }

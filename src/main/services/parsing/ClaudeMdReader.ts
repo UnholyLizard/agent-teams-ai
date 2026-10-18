@@ -273,9 +273,21 @@ export async function readAllClaudeMdFiles(
   const userMemoryPath = path.join(getClaudeBasePath(), 'CLAUDE.md');
   files.set('user', await readClaudeMdFile(userMemoryPath, fsProvider));
 
+  // User memory (Gemini): ~/.gemini/GEMINI.md
+  const userGeminiPath = path.join(getHomeDir(), '.gemini', 'GEMINI.md');
+  files.set('user-gemini', await readClaudeMdFile(userGeminiPath, fsProvider));
+
   // 3. Project memory: ${projectRoot}/CLAUDE.md
   const projectMemoryPath = path.join(expandedProjectRoot, 'CLAUDE.md');
   files.set('project', await readClaudeMdFile(projectMemoryPath, fsProvider));
+
+  // Project memory (AGENTS.md): ${projectRoot}/AGENTS.md
+  const projectAgentsPath = path.join(expandedProjectRoot, 'AGENTS.md');
+  files.set('project-agents', await readClaudeMdFile(projectAgentsPath, fsProvider));
+
+  // Project memory (GEMINI.md): ${projectRoot}/GEMINI.md
+  const projectGeminiPath = path.join(expandedProjectRoot, 'GEMINI.md');
+  files.set('project-gemini', await readClaudeMdFile(projectGeminiPath, fsProvider));
 
   // 4. Project memory alt: ${projectRoot}/.claude/CLAUDE.md
   const projectMemoryAltPath = path.join(expandedProjectRoot, '.claude', 'CLAUDE.md');
@@ -285,6 +297,14 @@ export async function readAllClaudeMdFiles(
   const projectRulesPath = path.join(expandedProjectRoot, '.claude', 'rules');
   files.set('project-rules', await readDirectoryMdFiles(projectRulesPath, fsProvider));
 
+  // Project rules (.agents): ${projectRoot}/.agents/rules/*.md
+  const projectAgentsRulesPath = path.join(expandedProjectRoot, '.agents', 'rules');
+  files.set('project-agents-rules', await readDirectoryMdFiles(projectAgentsRulesPath, fsProvider));
+
+  // Project rules (.gemini): ${projectRoot}/.gemini/rules/*.md
+  const projectGeminiRulesPath = path.join(expandedProjectRoot, '.gemini', 'rules');
+  files.set('project-gemini-rules', await readDirectoryMdFiles(projectGeminiRulesPath, fsProvider));
+
   // 6. Project local: ${projectRoot}/CLAUDE.local.md
   const projectLocalPath = path.join(expandedProjectRoot, 'CLAUDE.local.md');
   files.set('project-local', await readClaudeMdFile(projectLocalPath, fsProvider));
@@ -293,6 +313,10 @@ export async function readAllClaudeMdFiles(
   const userRulesPath = path.join(getClaudeBasePath(), 'rules');
   files.set('user-rules', await readDirectoryMdFiles(userRulesPath, fsProvider));
 
+  // User rules (Gemini): ~/.gemini/config/rules/**/*.md
+  const userGeminiRulesPath = path.join(getHomeDir(), '.gemini', 'config', 'rules');
+  files.set('user-gemini-rules', await readDirectoryMdFiles(userGeminiRulesPath, fsProvider));
+
   // 8. Auto memory: ~/.claude/projects/<encoded>/memory/MEMORY.md
   files.set('auto-memory', await readAutoMemoryFile(projectRoot, fsProvider));
 
@@ -300,17 +324,25 @@ export async function readAllClaudeMdFiles(
 }
 
 /**
- * Reads a specific directory's CLAUDE.md file.
- * Used for directory-specific CLAUDE.md detected from file reads.
+ * Reads a specific directory's rule file (CLAUDE.md, AGENTS.md, or GEMINI.md).
+ * Used for directory-specific rule files detected from file reads.
  * @param dirPath - Path to the directory (supports ~ expansion)
  * @param fsProvider - Optional filesystem provider (defaults to local)
- * @returns ClaudeMdFileInfo for the CLAUDE.md file in that directory
+ * @returns ClaudeMdFileInfo for the detected rule file in that directory
  */
 export async function readDirectoryClaudeMd(
   dirPath: string,
   fsProvider: FileSystemProvider = defaultProvider
 ): Promise<ClaudeMdFileInfo> {
   const expandedDirPath = expandTilde(dirPath);
+  const candidates = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
+  for (const candidate of candidates) {
+    const candidatePath = path.join(expandedDirPath, candidate);
+    const info = await readClaudeMdFile(candidatePath, fsProvider);
+    if (info.exists) {
+      return info;
+    }
+  }
   const claudeMdPath = path.join(expandedDirPath, 'CLAUDE.md');
   return readClaudeMdFile(claudeMdPath, fsProvider);
 }

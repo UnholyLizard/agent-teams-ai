@@ -41,6 +41,12 @@ export const SKILL_ROOT_DEFINITIONS: readonly SkillRootDefinition[] = [
     segments: ['.codex', 'skills'],
     audience: 'codex',
   },
+  {
+    rootKind: 'gemini',
+    directoryName: '.gemini',
+    segments: ['.gemini', 'skills'],
+    audience: 'shared',
+  },
 ] as const;
 
 export function getSkillRootDefinition(rootKind: SkillRootKind): SkillRootDefinition {

@@ -32,6 +32,7 @@ import {
   type GeminiRuntimeAuthState,
   resolveGeminiRuntimeAuth,
 } from '../../runtime/geminiRuntimeAuth';
+import { AgyBinaryResolver } from '../AgyBinaryResolver';
 
 import {
   AnthropicApiKeyHelperLeaseConflictError,
@@ -113,6 +114,7 @@ export interface TeamProvisioningEnvBuilderPorts {
   buildProviderAwareCliEnv?: typeof buildProviderAwareCliEnv;
   prepareAgentChildProcessWritableEnv?: typeof prepareAgentChildProcessWritableEnv;
   resolveGeminiRuntimeAuth?: typeof resolveGeminiRuntimeAuth;
+  resolveAgyBinaryPath?: () => Promise<string | null>;
   getConfiguredRuntimeBackend?: typeof getConfiguredRuntimeBackend;
   materializeAnthropicTeamApiKeyHelper?: typeof materializeAnthropicTeamApiKeyHelper;
   verifyAnthropicTeamApiKeyHelperMaterial?: typeof verifyAnthropicTeamApiKeyHelperMaterial;
@@ -276,6 +278,28 @@ function buildCodexCrossProviderSafeEnvPatch(env: NodeJS.ProcessEnv): NodeJS.Pro
   return envPatch;
 }
 
+const GEMINI_CROSS_PROVIDER_SAFE_ENV_KEYS = [
+  'CLAUDE_CODE_GEMINI_BACKEND',
+  'AGY_CLI_PATH',
+  'GEMINI_API_KEY',
+  'GOOGLE_API_KEY',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'GOOGLE_CLOUD_PROJECT',
+  'GOOGLE_CLOUD_PROJECT_ID',
+  'GCLOUD_PROJECT',
+] as const;
+
+function buildGeminiCrossProviderSafeEnvPatch(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const envPatch: NodeJS.ProcessEnv = {};
+  for (const key of GEMINI_CROSS_PROVIDER_SAFE_ENV_KEYS) {
+    const value = env[key]?.trim();
+    if (value) {
+      envPatch[key] = value;
+    }
+  }
+  return envPatch;
+}
+
 function getOsUsername(ports: TeamProvisioningEnvBuilderPorts): string {
   try {
     return ports.getOsUsername ? ports.getOsUsername() : os.userInfo().username;
@@ -415,6 +439,12 @@ export async function buildProvisioningEnv({
   }
 
   if (resolvedProviderId === 'gemini') {
+    if (!providerEnv.AGY_CLI_PATH) {
+      const agyPath = await (ports.resolveAgyBinaryPath ?? (() => AgyBinaryResolver.resolve()))();
+      if (agyPath) {
+        providerEnv.AGY_CLI_PATH = agyPath;
+      }
+    }
     return {
       env: providerEnv,
       authSource: 'gemini_runtime',
@@ -598,6 +628,9 @@ export async function buildCrossProviderMemberArgs({
       }
       if (providerId === 'codex') {
         Object.assign(envPatch, buildCodexCrossProviderSafeEnvPatch(env.env));
+      }
+      if (providerId === 'gemini') {
+        Object.assign(envPatch, buildGeminiCrossProviderSafeEnvPatch(env.env));
       }
       if (providerId === 'anthropic') {
         Object.assign(envPatch, buildAnthropicCrossProviderConnectionEnvPatch(env.env));

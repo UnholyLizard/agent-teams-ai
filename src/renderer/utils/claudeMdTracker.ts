@@ -266,7 +266,11 @@ export function extractFileRefsFromResponses(responses: ParsedMessage[]): FileRe
  * Detect potential CLAUDE.md files by walking up from a file's directory to project root.
  * Returns paths to CLAUDE.md files that would be injected based on the file path.
  */
-export function detectClaudeMdFromFilePath(filePath: string, projectRoot: string): string[] {
+export function detectClaudeMdFromFilePath(
+  filePath: string,
+  projectRoot: string,
+  filename: string = CLAUDE_MD_FILENAME
+): string[] {
   const claudeMdPaths: string[] = [];
   const sep = filePath.includes('\\') ? '\\' : '/';
 
@@ -275,8 +279,8 @@ export function detectClaudeMdFromFilePath(filePath: string, projectRoot: string
 
   // Walk up to project root (inclusive)
   while (currentDir && isAtOrAbove(projectRoot, currentDir)) {
-    // Add potential CLAUDE.md path for this directory
-    const claudeMdPath = `${currentDir}${sep}${CLAUDE_MD_FILENAME}`;
+    // Add potential rule file path for this directory
+    const claudeMdPath = `${currentDir}${sep}${filename}`;
     claudeMdPaths.push(claudeMdPath);
 
     // Move to parent directory
@@ -307,8 +311,8 @@ export function createGlobalInjections(
   const injections: ClaudeMdInjection[] = [];
 
   // Helper to get token count from tokenData or fallback to default
-  const getTokens = (key: string): number => {
-    return tokenData?.[key]?.estimatedTokens ?? DEFAULT_ESTIMATED_TOKENS;
+  const getTokens = (key: string, hasDefault = true): number => {
+    return tokenData?.[key]?.estimatedTokens ?? (hasDefault ? DEFAULT_ESTIMATED_TOKENS : 0);
   };
 
   // 1. Enterprise config
@@ -343,9 +347,27 @@ export function createGlobalInjections(
     });
   }
 
+  // User memory (Gemini: ~/.gemini/GEMINI.md)
+  const userGeminiPath = '~/.gemini/GEMINI.md';
+  const userGeminiTokens = getTokens('user-gemini', false);
+  if (userGeminiTokens > 0) {
+    injections.push({
+      id: generateInjectionId(userGeminiPath),
+      path: userGeminiPath,
+      source: 'user-memory',
+      displayName: getDisplayName(userGeminiPath, 'user-memory'),
+      isGlobal: true,
+      estimatedTokens: userGeminiTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
+
   // 3. Project memory - could be at root or in .claude folder
   const projectMemoryPath = joinPaths(projectRoot, 'CLAUDE.md');
   const projectMemoryAltPath = joinPaths(projectRoot, '.claude/CLAUDE.md');
+  const projectAgentsPath = joinPaths(projectRoot, 'AGENTS.md');
+  const projectGeminiPath = joinPaths(projectRoot, 'GEMINI.md');
+
   // Add the main project CLAUDE.md
   const projectTokens = getTokens('project');
   if (projectTokens > 0) {
@@ -372,6 +394,32 @@ export function createGlobalInjections(
       firstSeenInGroup: aiGroupId,
     });
   }
+  // Project AGENTS.md
+  const projectAgentsTokens = getTokens('project-agents', false);
+  if (projectAgentsTokens > 0) {
+    injections.push({
+      id: generateInjectionId(projectAgentsPath),
+      path: projectAgentsPath,
+      source: SOURCE_PROJECT_MEMORY,
+      displayName: getDisplayName(projectAgentsPath, SOURCE_PROJECT_MEMORY),
+      isGlobal: true,
+      estimatedTokens: projectAgentsTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
+  // Project GEMINI.md
+  const projectGeminiTokens = getTokens('project-gemini', false);
+  if (projectGeminiTokens > 0) {
+    injections.push({
+      id: generateInjectionId(projectGeminiPath),
+      path: projectGeminiPath,
+      source: SOURCE_PROJECT_MEMORY,
+      displayName: getDisplayName(projectGeminiPath, SOURCE_PROJECT_MEMORY),
+      isGlobal: true,
+      estimatedTokens: projectGeminiTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
 
   // 4. Project rules (*.md files in .claude/rules/)
   const projectRulesPath = joinPaths(projectRoot, '.claude/rules/*.md');
@@ -384,6 +432,34 @@ export function createGlobalInjections(
       displayName: getDisplayName(projectRulesPath, 'project-rules'),
       isGlobal: true,
       estimatedTokens: projectRulesTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
+  // Project rules (*.md files in .agents/rules/)
+  const projectAgentsRulesPath = joinPaths(projectRoot, '.agents/rules/*.md');
+  const projectAgentsRulesTokens = getTokens('project-agents-rules', false);
+  if (projectAgentsRulesTokens > 0) {
+    injections.push({
+      id: generateInjectionId(projectAgentsRulesPath),
+      path: projectAgentsRulesPath,
+      source: 'project-rules',
+      displayName: getDisplayName(projectAgentsRulesPath, 'project-rules'),
+      isGlobal: true,
+      estimatedTokens: projectAgentsRulesTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
+  // Project rules (*.md files in .gemini/rules/)
+  const projectGeminiRulesPath = joinPaths(projectRoot, '.gemini/rules/*.md');
+  const projectGeminiRulesTokens = getTokens('project-gemini-rules', false);
+  if (projectGeminiRulesTokens > 0) {
+    injections.push({
+      id: generateInjectionId(projectGeminiRulesPath),
+      path: projectGeminiRulesPath,
+      source: 'project-rules',
+      displayName: getDisplayName(projectGeminiRulesPath, 'project-rules'),
+      isGlobal: true,
+      estimatedTokens: projectGeminiRulesTokens,
       firstSeenInGroup: aiGroupId,
     });
   }
@@ -414,6 +490,21 @@ export function createGlobalInjections(
       displayName: getDisplayName(userRulesPath, 'user-rules'),
       isGlobal: true,
       estimatedTokens: userRulesTokens,
+      firstSeenInGroup: aiGroupId,
+    });
+  }
+
+  // User rules (Gemini: ~/.gemini/config/rules/**/*.md)
+  const userGeminiRulesPath = '~/.gemini/config/rules/**/*.md';
+  const userGeminiRulesTokens = getTokens('user-gemini-rules', false);
+  if (userGeminiRulesTokens > 0) {
+    injections.push({
+      id: generateInjectionId(userGeminiRulesPath),
+      path: userGeminiRulesPath,
+      source: 'user-rules',
+      displayName: getDisplayName(userGeminiRulesPath, 'user-rules'),
+      isGlobal: true,
+      estimatedTokens: userGeminiRulesTokens,
       firstSeenInGroup: aiGroupId,
     });
   }
@@ -535,6 +626,10 @@ function computeClaudeMdStats(params: ComputeClaudeMdStatsParams): ClaudeMdStats
           `${normalizeForComparison(projectRoot)}/CLAUDE.md` ||
         normalizeForComparison(claudeMdPath) ===
           `${normalizeForComparison(projectRoot)}/.claude/CLAUDE.md` ||
+        normalizeForComparison(claudeMdPath) ===
+          `${normalizeForComparison(projectRoot)}/AGENTS.md` ||
+        normalizeForComparison(claudeMdPath) ===
+          `${normalizeForComparison(projectRoot)}/GEMINI.md` ||
         normalizeForComparison(claudeMdPath) ===
           `${normalizeForComparison(projectRoot)}/CLAUDE.local.md`;
 

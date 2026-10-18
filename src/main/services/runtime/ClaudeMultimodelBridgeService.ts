@@ -1,3 +1,5 @@
+import { enrichGeminiProviderStatusSync } from '@main/services/infrastructure/geminiProviderStatusEnricher';
+import { AgyBinaryResolver } from '@main/services/team/AgyBinaryResolver';
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { execCliWithOpenCodeRecovery as execCli } from '@main/utils/openCodeNodeModulesJunction';
@@ -1036,7 +1038,7 @@ export class ClaudeMultimodelBridgeService {
       statusCheck.statusCheckOutcome === 'authoritative' &&
       runtimeStatus.verificationState === 'verified';
 
-    return sanitizeProviderStatusAuthority({
+    const mapped = sanitizeProviderStatusAuthority({
       ...provider,
       supported: runtimeStatus.supported === true,
       authenticated: isAuthoritativeStatus && runtimeStatus.authenticated === true,
@@ -1129,6 +1131,7 @@ export class ClaudeMultimodelBridgeService {
           }
         : null,
     });
+    return providerId === 'gemini' ? (enrichGeminiProviderStatusSync(mapped) ?? mapped) : mapped;
   }
 
   private projectProviderStatuses(providers: CliProviderStatus[]): CliProviderStatus[] {
@@ -1804,47 +1807,74 @@ export class ClaudeMultimodelBridgeService {
 
   private async buildGeminiStatus(binaryPath: string): Promise<CliProviderStatus> {
     const provider = createDefaultProviderStatus('gemini');
+    provider.displayName = 'Antigravity / Gemini';
     const { env } = await this.buildProviderCliEnv(binaryPath, 'gemini');
 
-    try {
-      const { stdout } = await execCli(
-        binaryPath,
-        ['model', 'list', '--json', '--provider', 'gemini'],
-        {
+    const authState = await resolveGeminiRuntimeAuth(env);
+    const agyBinary = await AgyBinaryResolver.resolve().catch(() => null);
+
+    if (agyBinary) {
+      provider.supported = true;
+      provider.capabilities = {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: createDefaultCliExtensionCapabilities(),
+      };
+      try {
+        const { stdout } = await execCli(agyBinary, ['models'], {
           timeout: PROVIDER_MODELS_TIMEOUT_MS,
           maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
           env,
+        });
+        const parsedModels = stdout
+          .split('\n')
+          .map((line) => line.trim().split(/\t|\s{2,}/)[0])
+          .filter((m) => m && !m.toLowerCase().startsWith('fetching'));
+        if (parsedModels.length > 0) {
+          provider.models = parsedModels;
+          provider.defaultModel =
+            parsedModels.find((m) => m.includes('4-argon') || m.includes('3.8-flash')) ??
+            parsedModels[0];
         }
-      );
-      const parsed = extractJsonObject<ProviderModelsCommandResponse>(stdout);
-      const models = extractModelIds(parsed.providers?.gemini?.models);
-      if (models.length > 0) {
-        provider.supported = true;
-        provider.models = models;
-        provider.capabilities = {
-          teamLaunch: true,
-          oneShot: true,
-          extensions: createDefaultCliExtensionCapabilities(),
-        };
+      } catch (error) {
+        logger.warn(
+          `agy models probe failed: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
-    } catch (error) {
-      logger.warn(
-        `Gemini model list unavailable: ${error instanceof Error ? error.message : String(error)}`
-      );
     }
 
-    const authState = await resolveGeminiRuntimeAuth(env);
-    if (authState.authenticated) {
+    if (provider.models.length === 0) {
+      provider.models = [
+        'gemini-4-argon-medium',
+        'gemini-4-argon-high',
+        'gemini-4-argon-low',
+        'gemini-3.8-flash-high',
+        'gemini-3.8-flash-medium',
+        'gemini-3.8-flash-low',
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-lite',
+      ];
+      provider.defaultModel = 'gemini-4-argon-medium';
+    }
+
+    if (authState.authenticated || agyBinary) {
       provider.authenticated = true;
-      provider.authMethod =
-        authState.authMethod === 'adc_authorized_user' ||
-        authState.authMethod === 'adc_service_account'
+      provider.authMethod = authState.authenticated
+        ? authState.authMethod === 'adc_authorized_user' ||
+          authState.authMethod === 'adc_service_account'
           ? `gemini_${authState.authMethod}`
-          : authState.authMethod;
+          : authState.authMethod
+        : 'agy_cli';
       provider.verificationState = 'verified';
       provider.statusCheckOutcome = 'authoritative';
       provider.statusCheckErrorCode = undefined;
       provider.statusMessage = null;
+      if (agyBinary) {
+        return (
+          enrichGeminiProviderStatusSync(provider) ?? sanitizeProviderStatusAuthority(provider)
+        );
+      }
       if (authState.authMethod === 'cli_oauth_personal') {
         provider.backend = {
           kind: 'cli',

@@ -7,6 +7,7 @@ const ROOT_PRECEDENCE: Record<SkillCatalogItem['rootKind'], number> = {
   cursor: 1,
   agents: 2,
   codex: 3,
+  gemini: 4,
 };
 
 export class SkillValidator {

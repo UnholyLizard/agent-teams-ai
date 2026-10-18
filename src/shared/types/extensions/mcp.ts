@@ -132,3 +132,48 @@ export interface McpSearchResult {
   servers: McpCatalogItem[];
   warnings: string[]; // e.g. "Official registry unavailable"
 }
+
+// ── AGY MCP Synchronization Types ──────────────────────────────────────────
+
+export interface AgyMcpServerConfig {
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  serverUrl?: string;
+  headers?: Record<string, string>;
+  authProviderType?: string;
+  disabled?: boolean;
+}
+
+export interface AgyMcpServerInfo {
+  name: string;
+  type: 'stdio' | 'http';
+  status: 'enabled' | 'disabled';
+  commandOrUrl: string;
+  scope: 'global' | 'project';
+  config?: AgyMcpServerConfig;
+}
+
+export interface McpSyncResult {
+  success: boolean;
+  direction: 'to-agy' | 'from-agy' | 'bidirectional';
+  added: string[];
+  updated: string[];
+  skipped: string[];
+  failed: Array<{ name: string; error: string }>;
+}
+
+export interface McpBidirectionalSyncResult {
+  success: boolean;
+  toAgy: McpSyncResult;
+  fromAgy: McpSyncResult;
+}
+
+export interface AgyMcpSyncRequest {
+  direction?: 'to-agy' | 'from-agy' | 'bidirectional';
+  projectPath?: string;
+  overwrite?: boolean;
+  includeDisabled?: boolean;
+  preferSource?: 'agy' | 'app';
+}

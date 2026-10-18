@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
@@ -6,6 +6,7 @@ import { StringDecoder } from 'node:string_decoder';
 import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServer/CodexBinaryResolver';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { providerConnectionService } from '@main/services/runtime/ProviderConnectionService';
+import { AgyBinaryResolver } from '@main/services/team/AgyBinaryResolver';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { resolveAgentTeamsMcpLaunchSpec } from '@main/services/team/TeamMcpConfigBuilder';
 import { killProcessTreeAndWait, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
@@ -31,15 +32,19 @@ export async function prepareNativeAgentRun(
   const binary =
     provider === 'codex'
       ? await CodexBinaryResolver.resolve()
-      : await ClaudeBinaryResolver.resolveNative();
+      : provider === 'agy'
+        ? await AgyBinaryResolver.resolve()
+        : await ClaudeBinaryResolver.resolveNative();
   if (!binary) throw new Error('Native provider binary not found');
+  const targetProviderId = provider === 'agy' ? 'gemini' : provider;
   const preparedEnv = await buildProviderAwareCliEnv({
     binaryPath: binary,
-    providerId: provider,
+    providerId: targetProviderId,
     codexLaunchDialect: provider === 'codex' ? 'native' : undefined,
     providerBackendId: provider === 'codex' ? 'codex-native' : 'cli-sdk',
   });
-  if (preparedEnv.connectionIssues[provider]) throw new Error('Provider connection is unavailable');
+  if (preparedEnv.connectionIssues[targetProviderId])
+    throw new Error('Provider connection is unavailable');
   const env = { ...preparedEnv.env };
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
@@ -69,6 +74,21 @@ export async function prepareNativeAgentRun(
   ];
   // The provider never starts from a user project and cannot inherit its project settings.
   const cwd = await mkdtemp(join(tmpdir(), 'agent-teams-native-prompt-'));
+  if (provider === 'agy' && connection.mcp.url) {
+    const agentsDir = join(cwd, '.agents');
+    await mkdir(agentsDir, { recursive: true });
+    await writeFile(
+      join(agentsDir, 'mcp_config.json'),
+      JSON.stringify({
+        mcpServers: {
+          'agent-teams': {
+            url: connection.mcp.url,
+          },
+        },
+      }),
+      'utf8'
+    );
+  }
   let child: ChildProcess | null = null;
   let closed: Promise<void> | null = null;
   let stopped = false;
@@ -130,6 +150,8 @@ export async function prepareNativeAgentRun(
               type?: string;
               subtype?: string;
               is_error?: boolean;
+              event?: string;
+              result?: { status?: string };
             };
             if (provider === 'anthropic' && event.type === 'result') {
               resultSuccess = event.is_error !== true && event.subtype === 'success';
@@ -138,6 +160,14 @@ export async function prepareNativeAgentRun(
             if (provider === 'codex') {
               resultSuccess ||= event.type === 'turn.completed';
               failed ||= event.type === 'turn.failed' || event.type === 'error';
+            }
+            if (provider === 'agy') {
+              if (event.event === 'result') {
+                resultSuccess = event.result?.status === 'SUCCESS';
+                failed ||= !resultSuccess;
+              } else if (event.event === 'error') {
+                failed = true;
+              }
             }
           } catch {
             /* plain diagnostics are still useful output */
@@ -191,7 +221,13 @@ export async function prepareNativeAgentRun(
           resolveClosed();
           resolve({ successful: code === 0 && resultSuccess && !failed && !stopped });
         });
-        ownedChild.stdin?.end(prompt);
+        if (provider === 'agy') {
+          ownedChild.stdin?.end(
+            JSON.stringify({ event: 'user', message: { content: prompt } }) + '\n'
+          );
+        } else {
+          ownedChild.stdin?.end(prompt);
+        }
       });
     },
   };

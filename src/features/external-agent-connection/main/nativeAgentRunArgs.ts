@@ -27,6 +27,17 @@ export function nativeAgentRunArgs(
   if (!connection.mcp.url) throw new Error('App MCP is unavailable');
   if (!tools.includes('app_get_connection_info') || !tools.includes('team_create'))
     throw new Error('Management MCP tools are unavailable');
+  if (provider === 'agy') {
+    return [
+      '--input-format',
+      'stream-json',
+      '--output-format',
+      'stream-json',
+      '--dangerously-skip-permissions',
+      '--disable-slash-commands',
+      '--print=',
+    ];
+  }
   if (provider === 'anthropic') {
     if (!managementMcp) throw new Error('Bound management MCP launch is unavailable');
     const namespaced = (tool: string) => `mcp__${SERVER_NAME}__${tool}`;

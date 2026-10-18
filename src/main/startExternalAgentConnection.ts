@@ -10,6 +10,7 @@ import { CodexBinaryResolver } from '@main/services/infrastructure/codexAppServe
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { applyAgentTeamsMcpAppContext } from '@main/services/runtime/agentTeamsMcpLaunchEnv';
 import { agentTeamsMcpHttpServer } from '@main/services/team/AgentTeamsMcpHttpServer';
+import { AgyBinaryResolver } from '@main/services/team/AgyBinaryResolver';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import {
   applyOpenCodeBoundControlEnvironment,
@@ -74,15 +75,17 @@ export function composeExternalAgentConnection(options: {
   }
   const directRun = new ExternalAgentRunService({
     async getAvailability() {
-      const [codex, anthropic] = await Promise.all([
+      const [codex, anthropic, agy] = await Promise.all([
         CodexBinaryResolver.resolve().catch(() => null),
         ClaudeBinaryResolver.resolveNative().catch(() => null),
+        AgyBinaryResolver.resolve().catch(() => null),
       ]);
-      return { codex: Boolean(codex), anthropic: Boolean(anthropic) };
+      return { codex: Boolean(codex), anthropic: Boolean(anthropic), agy: Boolean(agy) };
     },
     getConnectionInfo: connection.getConnectionInfo,
     withExpectedContext: connection.withExpectedContext,
-    getProviderStatus: (providerId) => options.nativeRun[0].getProviderStatus(providerId),
+    getProviderStatus: (providerId) =>
+      options.nativeRun[0].getProviderStatus(providerId === 'agy' ? 'gemini' : providerId),
     getCodexLaunchAllowed: async () => (await options.nativeRun[1]())?.launchAllowed === true,
     prepare: (provider, connectionInfo) =>
       prepareNativeAgentRun(provider, connectionInfo, {

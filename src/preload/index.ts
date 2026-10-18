@@ -65,6 +65,8 @@ import {
   HTTP_SERVER_GET_STATUS,
   HTTP_SERVER_START,
   HTTP_SERVER_STOP,
+  MCP_AGY_LIST,
+  MCP_AGY_SYNC,
   MCP_GITHUB_STARS,
   MCP_REGISTRY_BROWSE,
   MCP_REGISTRY_DIAGNOSE,
@@ -430,17 +432,21 @@ import type {
   WriteFileResponse,
 } from '@shared/types/editor';
 import type {
+  AgyMcpServerInfo,
+  AgyMcpSyncRequest,
   ApiKeyEntry,
   ApiKeyLookupResult,
   ApiKeySaveRequest,
   ApiKeyStorageStatus,
   EnrichedPlugin,
   InstalledMcpEntry,
+  McpBidirectionalSyncResult,
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
   McpSearchResult,
   McpServerDiagnostic,
+  McpSyncResult,
   OperationResult,
   PluginInstallRequest,
   PluginInstallScope,
@@ -1993,6 +1999,10 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<OperationResult>(MCP_REGISTRY_UNINSTALL, name, scope, projectPath),
     githubStars: (repositoryUrls: string[]) =>
       invokeIpcWithResult<Record<string, number>>(MCP_GITHUB_STARS, repositoryUrls),
+    syncAgy: (request?: AgyMcpSyncRequest) =>
+      invokeIpcWithResult<McpSyncResult | McpBidirectionalSyncResult>(MCP_AGY_SYNC, request),
+    listAgy: (projectPath?: string) =>
+      invokeIpcWithResult<AgyMcpServerInfo[]>(MCP_AGY_LIST, projectPath),
   },
 
   // ===== Skills Catalog API (Electron-only) =====

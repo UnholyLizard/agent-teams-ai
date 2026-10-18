@@ -59,6 +59,7 @@ describe('SkillValidator', () => {
       makeSkill({ id: '/3', name: 'z-user', scope: 'user', rootKind: 'claude' }),
       makeSkill({ id: '/2', name: 'b-project-cursor', scope: 'project', rootKind: 'cursor' }),
       makeSkill({ id: '/1', name: 'a-project-claude', scope: 'project', rootKind: 'claude' }),
+      makeSkill({ id: '/6', name: 'd-project-gemini', scope: 'project', rootKind: 'gemini' }),
       makeSkill({ id: '/5', name: 'c-project-codex', scope: 'project', rootKind: 'codex' }),
       makeSkill({
         id: '/4',
@@ -68,6 +69,6 @@ describe('SkillValidator', () => {
       }),
     ]);
 
-    expect(result.map((item) => item.id)).toEqual(['/1', '/2', '/5', '/3', '/4']);
+    expect(result.map((item) => item.id)).toEqual(['/1', '/2', '/5', '/6', '/3', '/4']);
   });
 });

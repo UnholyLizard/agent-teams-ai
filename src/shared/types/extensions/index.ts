@@ -11,8 +11,12 @@ export type {
 } from './apikey';
 export type { ExtensionOperationState, InstallScope, OperationResult } from './common';
 export type {
+  AgyMcpServerConfig,
+  AgyMcpServerInfo,
+  AgyMcpSyncRequest,
   InstalledMcpEntry,
   McpAuthHeaderDef,
+  McpBidirectionalSyncResult,
   McpCatalogItem,
   McpCustomInstallRequest,
   McpEnvVarDef,
@@ -25,6 +29,7 @@ export type {
   McpServerDiagnostic,
   McpServerHealthStatus,
   McpStdioInstallSpec,
+  McpSyncResult,
   McpToolDef,
 } from './mcp';
 export type {

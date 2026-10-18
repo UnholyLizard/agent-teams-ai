@@ -2746,7 +2746,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                     shortLivedModelIssueReasons.modelUnavailableReasonByProvider
                   }
                   softDeleteMembers
-                  disableGeminiOption={isGeminiUiFrozen()}
+                  disableGeminiOption={isGeminiUiFrozen(runtimeProviderStatusById.get('gemini'))}
                   headerBottom={
                     showRosterTeammateRuntimeCompatibility || hasSelectedWorktreeIsolation ? (
                       <div className="space-y-2">
@@ -2908,7 +2908,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onValueChange={setSelectedModel}
                   projectPath={effectiveCwd || null}
                   id="dialog-model"
-                  disableGeminiOption={isGeminiUiFrozen()}
+                  disableGeminiOption={isGeminiUiFrozen(runtimeProviderStatusById.get('gemini'))}
                   providerDisabledReasonById={{
                     opencode: OPENCODE_ONE_SHOT_DISABLED_REASON,
                   }}

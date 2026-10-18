@@ -64,7 +64,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'codex':
       return 'Codex';
     case 'gemini':
-      return 'Gemini';
+      return 'Antigravity / Gemini';
     case 'opencode':
       return 'OpenCode (200+ models)';
   }

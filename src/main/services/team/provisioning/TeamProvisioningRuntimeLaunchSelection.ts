@@ -207,7 +207,7 @@ export function getLaunchModelArg(
   }
 
   if (
-    providerId === 'codex' &&
+    (providerId === 'codex' || providerId === 'gemini') &&
     launchIdentity?.selectedModelKind === 'default' &&
     launchIdentity.resolvedLaunchModel
   ) {

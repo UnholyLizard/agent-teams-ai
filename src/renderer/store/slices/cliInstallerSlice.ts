@@ -12,7 +12,6 @@ import {
   recordRuntimeInstallEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
-import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { isTeamProviderModelCatalogFresh } from '@renderer/utils/teamModelAvailability';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { createLogger } from '@shared/utils/logger';
@@ -50,9 +49,10 @@ const CODEX_CATALOG_LOADING_REFRESH_ATTEMPTS = 6;
 const CODEX_CATALOG_LOADING_REFRESH_RETRY_DELAY_MS = 5_000;
 export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
-export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
-  ? ['anthropic', 'codex', 'opencode']
-  : ['anthropic', 'codex', 'gemini', 'opencode'];
+/* prettier-ignore */
+export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = [
+  'anthropic', 'codex', 'gemini', 'opencode',
+];
 const MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(MULTIMODEL_PROVIDER_IDS);
 
 export interface CliProviderStatusFetchOptions {
@@ -757,7 +757,7 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'codex':
       return 'Codex';
     case 'gemini':
-      return 'Gemini';
+      return 'Antigravity / Gemini';
     case 'opencode':
       return 'OpenCode (200+ models)';
   }

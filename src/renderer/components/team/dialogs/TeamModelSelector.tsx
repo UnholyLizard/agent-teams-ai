@@ -263,6 +263,7 @@ const OPENCODE_LOCAL_MODELS_TAB_ID = 'opencode-local-models';
 const PROVIDERS: ProviderDef[] = [
   { id: 'anthropic', label: 'Anthropic', comingSoon: false },
   { id: 'codex', label: 'Codex', comingSoon: false },
+  { id: 'gemini', label: 'Antigravity / Gemini', comingSoon: false },
   { id: 'opencode', label: 'OpenCode', comingSoon: false },
 ];
 

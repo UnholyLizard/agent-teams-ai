@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  createGlobalInjections,
   detectClaudeMdFromFilePath,
   extractUserMentionPaths,
   getDirectory,
@@ -203,5 +204,49 @@ describe('extractUserMentionPaths Windows paths', () => {
     expect(
       extractUserMentionPaths(userGroupWithPath('@\\\\server\\share\\file.ts'), 'C:\\Repo')
     ).toEqual(['\\\\server\\share\\file.ts']);
+  });
+});
+
+describe('createGlobalInjections with Antigravity / Gemini rule sources', () => {
+  it('injects AGENTS.md and GEMINI.md when tokens are present', () => {
+    const tokenData = {
+      'project-agents': { path: '/repo/AGENTS.md', exists: true, charCount: 200, estimatedTokens: 50 },
+      'project-gemini': { path: '/repo/GEMINI.md', exists: true, charCount: 400, estimatedTokens: 100 },
+      'user-gemini': { path: '~/.gemini/GEMINI.md', exists: true, charCount: 600, estimatedTokens: 150 },
+      'project-agents-rules': { path: '/repo/.agents/rules', exists: true, charCount: 300, estimatedTokens: 75 },
+      'project-gemini-rules': { path: '/repo/.gemini/rules', exists: true, charCount: 500, estimatedTokens: 125 },
+      'user-gemini-rules': { path: '~/.gemini/config/rules', exists: true, charCount: 800, estimatedTokens: 200 },
+    };
+
+    const injections = createGlobalInjections('/repo', 'ai-0', tokenData as any);
+
+    const paths = injections.map((inj) => inj.path);
+    expect(paths).toContain('/repo/AGENTS.md');
+    expect(paths).toContain('/repo/GEMINI.md');
+    expect(paths).toContain('~/.gemini/GEMINI.md');
+    expect(paths).toContain('/repo/.agents/rules/*.md');
+    expect(paths).toContain('/repo/.gemini/rules/*.md');
+    expect(paths).toContain('~/.gemini/config/rules/**/*.md');
+  });
+
+  it('omits AGENTS.md and GEMINI.md when tokens are 0 or missing without tokenData', () => {
+    const injections = createGlobalInjections('/repo', 'ai-0');
+    const paths = injections.map((inj) => inj.path);
+    expect(paths).not.toContain('/repo/AGENTS.md');
+    expect(paths).not.toContain('/repo/GEMINI.md');
+    expect(paths).not.toContain('~/.gemini/GEMINI.md');
+    expect(paths).not.toContain('/repo/.agents/rules/*.md');
+    expect(paths).not.toContain('/repo/.gemini/rules/*.md');
+  });
+});
+
+describe('detectClaudeMdFromFilePath with custom rule filename', () => {
+  it('detects AGENTS.md files walking up Unix paths', () => {
+    const result = detectClaudeMdFromFilePath('/repo/src/lib/file.ts', '/repo', 'AGENTS.md');
+    expect(result).toEqual([
+      '/repo/src/lib/AGENTS.md',
+      '/repo/src/AGENTS.md',
+      '/repo/AGENTS.md',
+    ]);
   });
 });

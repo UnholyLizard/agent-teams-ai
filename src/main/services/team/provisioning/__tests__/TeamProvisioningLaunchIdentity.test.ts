@@ -291,6 +291,74 @@ describe('team provisioning launch identity facts', () => {
       '[codex] Failed to parse runtime model list for launch validation: No JSON object found in CLI output',
     ]);
   });
+
+  it('queries model list and runtime status for gemini provider', async () => {
+    const warnings: string[] = [];
+    const execCli = vi.fn(
+      async (_binaryPath: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
+        if (args.includes('model')) {
+          return {
+            stdout: JSON.stringify({
+              providers: {
+                gemini: {
+                  defaultModel: 'gemini-2.5-pro',
+                  models: ['gemini-2.5-pro', 'gemini-2.5-flash'],
+                },
+              },
+            }),
+            stderr: '',
+          };
+        }
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              gemini: {
+                supported: true,
+                runtimeCapabilities: {
+                  teamLaunch: true,
+                  oneShot: true,
+                },
+              },
+            },
+          }),
+          stderr: '',
+        };
+      }
+    );
+
+    const facts = await readRuntimeProviderLaunchFacts(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        providerId: 'gemini',
+        env: { PATH: '/bin' },
+        providerArgs: ['--provider-arg'],
+      },
+      {
+        execCli,
+        getCodexModelCatalog: vi.fn(async () => null),
+        warn: (message) => warnings.push(message),
+      }
+    );
+
+    expect(execCli).toHaveBeenCalledTimes(2);
+    expect(execCli).toHaveBeenNthCalledWith(
+      1,
+      '/bin/claude',
+      ['--provider-arg', 'model', 'list', '--json', '--provider', 'gemini'],
+      expect.objectContaining({ cwd: '/repo', env: { PATH: '/bin' } })
+    );
+    expect(execCli).toHaveBeenNthCalledWith(
+      2,
+      '/bin/claude',
+      ['--provider-arg', 'runtime', 'status', '--json', '--provider', 'gemini'],
+      expect.objectContaining({ cwd: '/repo', env: { PATH: '/bin' } })
+    );
+    expect(facts.defaultModel).toBe('gemini-2.5-pro');
+    expect(facts.modelIds).toEqual(new Set(['gemini-2.5-pro', 'gemini-2.5-flash']));
+    expect(facts.providerStatus?.capabilities?.teamLaunch).toBe(true);
+    expect(warnings).toHaveLength(0);
+  });
 });
 
 describe('team provisioning launch identity request shaping', () => {

@@ -78,7 +78,7 @@ function setup() {
     dispose: vi.fn(async () => {}),
   };
   const deps = {
-    getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
+    getAvailability: vi.fn(async () => ({ codex: true, anthropic: true, agy: true })),
     getConnectionInfo: vi.fn(async () => ({ ...connection, context: context.snapshot() })),
     withExpectedContext: async <T>(
       expected: ExternalAgentRunRequest['expectedContext'],
@@ -190,6 +190,17 @@ describe('native prompt run lifecycle', () => {
     await s.service.start(s.request);
     await vi.waitFor(() => expect(s.runtime.launch).toHaveBeenCalledOnce());
     expect(s.deps.getCodexLaunchAllowed).toHaveBeenCalledTimes(2);
+    s.result.resolve({ successful: true });
+    await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('completed'));
+    expect(s.runtime.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('launches AGY with authoritative Gemini CLI evidence', async () => {
+    const s = setup();
+    s.request.providerId = 'agy';
+    s.provider.providerId = 'gemini';
+    await s.service.start(s.request);
+    await vi.waitFor(() => expect(s.runtime.launch).toHaveBeenCalledOnce());
     s.result.resolve({ successful: true });
     await vi.waitFor(async () => expect((await s.service.getSnapshot())?.status).toBe('completed'));
     expect(s.runtime.dispose).toHaveBeenCalledOnce();

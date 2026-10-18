@@ -12,6 +12,8 @@ import {
   API_KEYS_LOOKUP,
   API_KEYS_SAVE,
   API_KEYS_STORAGE_STATUS,
+  MCP_AGY_LIST,
+  MCP_AGY_SYNC,
   MCP_GITHUB_STARS,
   MCP_REGISTRY_BROWSE,
   MCP_REGISTRY_DIAGNOSE,
@@ -36,17 +38,21 @@ import type { McpInstallService } from '../services/extensions/install/McpInstal
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
 import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
 import type {
+  AgyMcpServerInfo,
+  AgyMcpSyncRequest,
   ApiKeyEntry,
   ApiKeyLookupResult,
   ApiKeySaveRequest,
   ApiKeyStorageStatus,
   EnrichedPlugin,
   InstalledMcpEntry,
+  McpBidirectionalSyncResult,
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
   McpSearchResult,
   McpServerDiagnostic,
+  McpSyncResult,
   OperationResult,
   PluginInstallRequest,
 } from '@shared/types/extensions';
@@ -103,6 +109,8 @@ export function registerExtensionHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(API_KEYS_LOOKUP, handleApiKeysLookup);
   ipcMain.handle(API_KEYS_STORAGE_STATUS, handleApiKeysStorageStatus);
   ipcMain.handle(MCP_GITHUB_STARS, handleMcpGitHubStars);
+  ipcMain.handle(MCP_AGY_SYNC, handleMcpAgySync);
+  ipcMain.handle(MCP_AGY_LIST, handleMcpAgyList);
 }
 
 export function removeExtensionHandlers(ipcMain: IpcMain): void {
@@ -124,6 +132,8 @@ export function removeExtensionHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(API_KEYS_LOOKUP);
   ipcMain.removeHandler(API_KEYS_STORAGE_STATUS);
   ipcMain.removeHandler(MCP_GITHUB_STARS);
+  ipcMain.removeHandler(MCP_AGY_SYNC);
+  ipcMain.removeHandler(MCP_AGY_LIST);
 }
 
 // ── Service guard ──────────────────────────────────────────────────────────
@@ -373,6 +383,22 @@ async function handleMcpUninstall(
     }
     return result;
   });
+}
+
+async function handleMcpAgySync(
+  _event: IpcMainInvokeEvent,
+  request?: AgyMcpSyncRequest
+): Promise<IpcResult<McpSyncResult | McpBidirectionalSyncResult>> {
+  return wrapHandler('mcpAgySync', () => getFacade().syncAgyMcp(request));
+}
+
+async function handleMcpAgyList(
+  _event: IpcMainInvokeEvent,
+  projectPath?: string
+): Promise<IpcResult<AgyMcpServerInfo[]>> {
+  return wrapHandler('mcpAgyList', () =>
+    getFacade().listAgyMcp(typeof projectPath === 'string' ? projectPath : undefined)
+  );
 }
 
 // ── API Keys Guard ─────────────────────────────────────────────────────────

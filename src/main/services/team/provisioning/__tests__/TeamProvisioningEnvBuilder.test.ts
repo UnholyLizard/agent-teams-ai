@@ -72,12 +72,16 @@ describe('TeamProvisioningEnvBuilder', () => {
     try {
       const ports = createPorts({
         buildProviderAwareCliEnv: vi.fn(async () => ({
-          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' }, connectionIssues: {}, providerArgs: [],
+          env: { AGENT_TEAMS_BOUND_CONTEXT_JSON: 'stale-context' },
+          connectionIssues: {},
+          providerArgs: [],
         })),
       });
       const result = await buildProvisioningEnv({ providerId: 'opencode', ports });
       expect(result.env).toMatchObject(bound);
-    } finally { revoke(); }
+    } finally {
+      revoke();
+    }
   });
   it('projects the late launch-resolved control URL and app root into MCP child env as well as outer env', async () => {
     const ports = createPorts({
@@ -485,6 +489,59 @@ describe('TeamProvisioningEnvBuilder', () => {
       AWS_SHARED_CREDENTIALS_FILE: '/tmp/aws-credentials',
       ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
     });
+  });
+
+  it('resolves AGY_CLI_PATH for gemini provider when absent from provider env', async () => {
+    const ports = createPorts({
+      resolveAgyBinaryPath: vi.fn(async () => '/opt/google/bin/agy'),
+      resolveGeminiRuntimeAuth: vi.fn(async () => ({
+        authMethod: 'agy_cli',
+        authenticated: true,
+        backend: { kind: 'cli-sdk' as const },
+        resolvedBackend: 'cli-sdk' as const,
+        projectId: null,
+        statusMessage: null,
+      })),
+    });
+
+    const result = await buildProvisioningEnv({
+      providerId: 'gemini',
+      ports,
+    });
+
+    expect(result.env.AGY_CLI_PATH).toBe('/opt/google/bin/agy');
+    expect(result.authSource).toBe('gemini_runtime');
+    expect(result.geminiRuntimeAuth?.authenticated).toBe(true);
+  });
+
+  it('propagates gemini safe keys into cross-provider member args patch', async () => {
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'Researcher', providerId: 'gemini', role: 'Gemini specialist' }],
+      ports: {
+        buildProvisioningEnv: vi.fn(async () => ({
+          env: {
+            CLAUDE_CODE_GEMINI_BACKEND: 'cli-sdk',
+            AGY_CLI_PATH: '/opt/google/bin/agy',
+            GEMINI_API_KEY: 'test-gemini-key',
+            GOOGLE_CLOUD_PROJECT: 'my-agent-project',
+          },
+          authSource: 'gemini_runtime' as const,
+          geminiRuntimeAuth: null,
+          providerArgs: ['--provider', 'gemini'],
+        })),
+        buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+        logger: { error: vi.fn() },
+      },
+    });
+
+    expect(result.envPatch).toMatchObject({
+      CLAUDE_CODE_GEMINI_BACKEND: 'cli-sdk',
+      AGY_CLI_PATH: '/opt/google/bin/agy',
+      GEMINI_API_KEY: 'test-gemini-key',
+      GOOGLE_CLOUD_PROJECT: 'my-agent-project',
+    });
+    expect(result.args).toContain('--provider');
   });
 });
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */

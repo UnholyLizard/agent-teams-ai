@@ -8,16 +8,22 @@
 
 import { createLogger } from '@shared/utils/logger';
 
+import { AgyMcpConfigManager } from './agy/AgyMcpConfigManager';
+import { AgyMcpSyncService } from './agy/AgyMcpSyncService';
 import { type McpCatalogAggregator } from './catalog/McpCatalogAggregator';
 import { type PluginCatalogService } from './catalog/PluginCatalogService';
 import { type McpInstallationStateService } from './state/McpInstallationStateService';
 import { type PluginInstallationStateService } from './state/PluginInstallationStateService';
 
 import type {
+  AgyMcpServerInfo,
+  AgyMcpSyncRequest,
   EnrichedPlugin,
   InstalledMcpEntry,
+  McpBidirectionalSyncResult,
   McpCatalogItem,
   McpSearchResult,
+  McpSyncResult,
   PluginCatalogItem,
 } from '@shared/types/extensions';
 
@@ -28,7 +34,9 @@ export class ExtensionFacadeService {
     private readonly pluginCatalog: PluginCatalogService,
     private readonly pluginState: PluginInstallationStateService,
     private readonly mcpAggregator: McpCatalogAggregator | null = null,
-    private readonly mcpState: McpInstallationStateService | null = null
+    private readonly mcpState: McpInstallationStateService | null = null,
+    private readonly agyMcpSync: AgyMcpSyncService = new AgyMcpSyncService(),
+    private readonly agyMcpConfigManager: AgyMcpConfigManager = new AgyMcpConfigManager()
   ) {}
 
   // ── Plugin methods ───────────────────────────────────────────────────
@@ -124,6 +132,26 @@ export class ExtensionFacadeService {
   async getInstalledMcp(projectPath?: string): Promise<InstalledMcpEntry[]> {
     if (!this.mcpState) return [];
     return this.mcpState.getInstalled(projectPath);
+  }
+
+  // ── AGY MCP Synchronization ──────────────────────────────────────────
+
+  /**
+   * Synchronize MCP servers between app and AGY ecosystem.
+   */
+  async syncAgyMcp(
+    request?: AgyMcpSyncRequest
+  ): Promise<McpSyncResult | McpBidirectionalSyncResult> {
+    const result = await this.agyMcpSync.sync(request);
+    this.invalidateInstalledCache();
+    return result;
+  }
+
+  /**
+   * List AGY ecosystem MCP servers.
+   */
+  async listAgyMcp(projectPath?: string): Promise<AgyMcpServerInfo[]> {
+    return this.agyMcpConfigManager.listServers(projectPath);
   }
 
   // ── Cache invalidation ───────────────────────────────────────────────

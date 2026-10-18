@@ -89,9 +89,10 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       ],
     });
 
-    expect([...specs.keys()].sort()).toEqual(['alice', 'bob']);
+    expect([...specs.keys()].sort()).toEqual(['alice', 'bob', 'zoe']);
     const alice = specs.get('alice');
     const bob = specs.get('bob');
+    const zoe = specs.get('zoe');
     expect(alice?.contextText).toContain('<agent_teams_native_bootstrap_context>');
     expect(alice?.contextText).not.toContain('sk-ant-secret');
     expect(alice?.contextText).toContain('ANTHROPIC_API_KEY=[REDACTED]');
@@ -103,7 +104,11 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(bob?.contextText).toContain('Codex Native visible messaging rule');
     expect(bob?.contextText).toContain('mcp__agent-teams__task_get');
     expect(bob?.contextText).not.toContain('notify your team lead via SendMessage');
+    expect(zoe?.contextText).toContain('<agent_teams_native_bootstrap_context>');
+    expect(zoe?.contextText).toContain('Member: zoe');
+    expect(zoe?.contextText).toContain('Provider: gemini');
     expect(alice?.contextHash).toBe(hashNativeBootstrapText(alice?.contextText ?? ''));
+    expect(zoe?.contextHash).toBe(hashNativeBootstrapText(zoe?.contextText ?? ''));
   });
 
   it('warns but still builds for large native rosters below the aggregate budget', async () => {

@@ -255,7 +255,9 @@ export async function readRuntimeProviderLaunchFacts(
     }
   );
   const runtimeStatusPromise =
-    input.providerId === 'codex' || input.providerId === 'anthropic'
+    input.providerId === 'codex' ||
+    input.providerId === 'anthropic' ||
+    input.providerId === 'gemini'
       ? ports.execCli(
           input.claudePath,
           buildProviderControlPlaneCliCommandArgs(providerArgs, [

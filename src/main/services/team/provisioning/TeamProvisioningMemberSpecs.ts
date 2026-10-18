@@ -37,6 +37,20 @@ export function teamRequestIncludesCodexMember(
   });
 }
 
+export function teamRequestIncludesGeminiMember(
+  request: Pick<TeamCreateRequest, 'providerId'> & Partial<Pick<TeamCreateRequest, 'members'>>
+): boolean {
+  const defaultProviderId = normalizeTeamMemberProviderId(request.providerId) ?? 'anthropic';
+  const members = Array.isArray(request.members) ? request.members : [];
+  return members.some((member) => {
+    const memberProviderId =
+      normalizeTeamMemberProviderId(member.providerId) ??
+      normalizeTeamMemberProviderId((member as { provider?: unknown }).provider) ??
+      defaultProviderId;
+    return memberProviderId === 'gemini';
+  });
+}
+
 export function buildEffectiveTeamMemberSpec(
   member: TeamMemberInput,
   defaults: {

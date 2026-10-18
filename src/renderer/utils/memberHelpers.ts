@@ -377,7 +377,7 @@ function getRuntimeAdvisoryProviderLabel(
     case 'codex':
       return 'Codex';
     case 'gemini':
-      return 'Gemini';
+      return 'Antigravity / Gemini';
     case 'opencode':
       return model?.trim().toLowerCase().startsWith('kiro/') ? 'Kiro' : 'OpenCode';
     default:

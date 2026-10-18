@@ -41,7 +41,12 @@ const NATIVE_BOOTSTRAP_LARGE_ROSTER_MEMBER_COUNT = 7;
 const NATIVE_BOOTSTRAP_NEAR_LIMIT_RATIO = 0.85;
 
 export function isNativeAppManagedBootstrapProvider(providerId?: TeamProviderId): boolean {
-  return providerId == null || providerId === 'anthropic' || providerId === 'codex';
+  return (
+    providerId == null ||
+    providerId === 'anthropic' ||
+    providerId === 'codex' ||
+    providerId === 'gemini'
+  );
 }
 
 function resolveMemberBriefingRuntimeProvider(providerId?: TeamProviderId): 'native' | 'codex' {

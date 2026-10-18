@@ -551,6 +551,7 @@ describe('cliInstallerSlice', () => {
       ).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
     });
@@ -590,6 +591,7 @@ describe('cliInstallerSlice', () => {
       ).toEqual({
         anthropic: false,
         codex: true,
+        gemini: false,
         opencode: true,
       });
     });
@@ -630,6 +632,7 @@ describe('cliInstallerSlice', () => {
       ).toEqual({
         anthropic: false,
         codex: false,
+        gemini: true,
         opencode: false,
       });
     });
@@ -856,7 +859,7 @@ describe('cliInstallerSlice', () => {
       expect(merged.authMethod).toBeNull();
     });
 
-    it('drops hydrated hidden Gemini when a fresh frontend status omits it', () => {
+    it('preserves hydrated Gemini when a fresh frontend status omits it', () => {
       const current = createMultimodelStatus([
         createMultimodelProvider({
           providerId: 'anthropic',
@@ -867,7 +870,7 @@ describe('cliInstallerSlice', () => {
         }),
         createMultimodelProvider({
           providerId: 'gemini',
-          displayName: 'Gemini',
+          displayName: 'Antigravity / Gemini',
           authenticated: true,
           authMethod: 'gemini_api_key',
           models: ['gemini-2.5-pro'],
@@ -904,9 +907,10 @@ describe('cliInstallerSlice', () => {
         'anthropic',
         'codex',
         'opencode',
+        'gemini',
       ]);
-      expect(merged.authLoggedIn).toBe(false);
-      expect(merged.authMethod).toBeNull();
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('gemini_api_key');
     });
   });
 
@@ -1270,6 +1274,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
@@ -1293,6 +1298,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
@@ -1332,6 +1338,7 @@ describe('cliInstallerSlice', () => {
         expect(useStore.getState().cliProviderStatusLoading).toEqual({
           anthropic: false,
           codex: true,
+          gemini: false,
           opencode: false,
         });
         expect(
@@ -1373,6 +1380,7 @@ describe('cliInstallerSlice', () => {
         expect(useStore.getState().cliProviderStatusLoading).toEqual({
           anthropic: false,
           codex: false,
+          gemini: false,
           opencode: false,
         });
         expect(
@@ -1458,6 +1466,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
       expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({ authenticated: false });
@@ -1538,6 +1547,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: true,
+        gemini: false,
         opencode: false,
       });
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
@@ -1557,6 +1567,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
       expect(
@@ -1646,6 +1657,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
         codex: false,
+        gemini: false,
         opencode: false,
       });
       expect(
@@ -1678,6 +1690,11 @@ describe('cliInstallerSlice', () => {
           authMethod: 'chatgpt',
           models: ['gpt-5.4'],
           backend: { kind: 'codex-native', label: 'Codex' },
+        }),
+        createMultimodelProvider({
+          providerId: 'gemini',
+          displayName: 'Antigravity / Gemini',
+          statusMessage: 'Ready',
         }),
         createMultimodelProvider({
           providerId: 'opencode',
@@ -2593,7 +2610,7 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatusError).toBeNull();
     });
 
-    it('ignores hidden Gemini provider failures without keeping global auth checking active', async () => {
+    it('handles Gemini provider failures without keeping global auth checking active', async () => {
       useStore.setState({
         cliStatus: createMultimodelStatus([
           createMultimodelProvider({
@@ -2616,15 +2633,13 @@ describe('cliInstallerSlice', () => {
       });
       expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
-      expect(
-        useStore
-          .getState()
-          .cliStatus?.providers.find((provider) => provider.providerId === 'gemini')
-      ).toBeUndefined();
-      expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalled();
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        expect.objectContaining({ provider: 'gemini' })
+      );
     });
 
-    it('ignores hidden Gemini provider success responses in multimodel frontend state', async () => {
+    it('integrates Gemini provider success responses in multimodel frontend state', async () => {
       useStore.setState({
         cliStatus: createMultimodelStatus([
           createMultimodelProvider({
@@ -2639,9 +2654,9 @@ describe('cliInstallerSlice', () => {
       vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
         createMultimodelProvider({
           providerId: 'gemini',
-          displayName: 'Gemini',
+          displayName: 'Antigravity / Gemini',
           authenticated: true,
-          authMethod: 'gemini_api_key',
+          authMethod: 'agy_cli',
           models: ['gemini-2.5-pro'],
         })
       );
@@ -2651,13 +2666,13 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         gemini: false,
       });
-      expect(useStore.getState().cliStatus?.authLoggedIn).toBe(false);
-      expect(useStore.getState().cliStatus?.authMethod).toBeNull();
+      expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
+      expect(useStore.getState().cliStatus?.authMethod).toBe('agy_cli');
       expect(
         useStore
           .getState()
           .cliStatus?.providers.find((provider) => provider.providerId === 'gemini')
-      ).toBeUndefined();
+      ).toBeDefined();
     });
 
     it('marks authStatusChecking true while a multimodel provider refresh is in flight and clears it on success', async () => {

@@ -11,12 +11,16 @@ import type {
 } from './apikey';
 import type { OperationResult } from './common';
 import type {
+  AgyMcpServerInfo,
+  AgyMcpSyncRequest,
   InstalledMcpEntry,
+  McpBidirectionalSyncResult,
   McpCatalogItem,
   McpCustomInstallRequest,
   McpInstallRequest,
   McpSearchResult,
   McpServerDiagnostic,
+  McpSyncResult,
 } from './mcp';
 import type { EnrichedPlugin, PluginInstallRequest, PluginInstallScope } from './plugin';
 import type {
@@ -57,6 +61,8 @@ export interface McpCatalogAPI {
   installCustom: (request: McpCustomInstallRequest) => Promise<OperationResult>;
   uninstall: (name: string, scope?: string, projectPath?: string) => Promise<OperationResult>;
   githubStars: (repositoryUrls: string[]) => Promise<Record<string, number>>;
+  syncAgy: (request?: AgyMcpSyncRequest) => Promise<McpSyncResult | McpBidirectionalSyncResult>;
+  listAgy: (projectPath?: string) => Promise<AgyMcpServerInfo[]>;
 }
 
 // ── Skills API ─────────────────────────────────────────────────────────────

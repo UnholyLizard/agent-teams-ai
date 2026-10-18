@@ -125,7 +125,7 @@ describe('external prompt freshness and clipboard fallback', () => {
     const oversized = 'x'.repeat(20_001);
     vi.mocked(draftStorage.loadDraft).mockResolvedValueOnce(oversized);
     const runApi = {
-      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
+      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true, agy: true })),
       getSnapshot: vi.fn(async () => null),
       start: vi.fn(),
       cancel: vi.fn(),
@@ -173,6 +173,43 @@ describe('external prompt freshness and clipboard fallback', () => {
     for (const button of buttons) expect(button.disabled).toBe(false);
   });
 
+  it('enables and starts AGY native run when agy is available and authenticated', async () => {
+    const runApi = {
+      getAvailability: vi.fn(async () => ({ codex: false, anthropic: false, agy: true })),
+      getSnapshot: vi.fn(async () => null),
+      start: vi.fn(async (req) => ({
+        runId: 'agy-run-1',
+        providerId: req.providerId,
+        task: req.task,
+        context: req.expectedContext,
+        status: 'running' as const,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        logs: '',
+        error: null,
+      })),
+      cancel: vi.fn(),
+    };
+    await render({
+      getConnectionInfo: vi.fn(async () => snapshot()),
+      retryConnection: vi.fn(),
+      directRun: runApi,
+    });
+    const agyButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="external-agent-run-agy"]'
+    )!;
+    expect(agyButton).not.toBeNull();
+    expect(agyButton.disabled).toBe(false);
+    expect(agyButton.textContent).toContain('Run in AGY');
+    await act(async () => agyButton.click());
+    expect(runApi.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: 'agy',
+        task: 'Create a review team for the sandbox',
+      })
+    );
+  });
+
   // RED when reopening loses the owned run or textarea edits change what the active run claims to execute.
   it('recovers the active native run, blocks duplicates and cancels its immutable task after edits and reopening', async () => {
     const running: ExternalAgentRunSnapshot = {
@@ -188,7 +225,7 @@ describe('external prompt freshness and clipboard fallback', () => {
     };
     let current = running;
     const runApi = {
-      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true })),
+      getAvailability: vi.fn(async () => ({ codex: true, anthropic: true, agy: true })),
       start: vi.fn(),
       getSnapshot: vi.fn(async () => current),
       cancel: vi.fn(async () => {
@@ -248,10 +285,12 @@ describe('external prompt freshness and clipboard fallback', () => {
 
   // RED when authenticated SDK readiness enables Run despite a missing standalone native CLI.
   it('keeps Run disabled until native availability is known and reports missing Claude despite authenticated dashboard authority', async () => {
-    let finishAvailability!: (value: { codex: boolean; anthropic: boolean }) => void;
-    const availability = new Promise<{ codex: boolean; anthropic: boolean }>((resolve) => {
-      finishAvailability = resolve;
-    });
+    let finishAvailability!: (value: { codex: boolean; anthropic: boolean; agy: boolean }) => void;
+    const availability = new Promise<{ codex: boolean; anthropic: boolean; agy: boolean }>(
+      (resolve) => {
+        finishAvailability = resolve;
+      }
+    );
     const runApi = {
       getAvailability: vi.fn(() => availability),
       getSnapshot: vi.fn(async () => null),
@@ -274,7 +313,7 @@ describe('external prompt freshness and clipboard fallback', () => {
     expect(
       host.querySelector<HTMLButtonElement>('[data-testid="external-agent-run-copy"]')!.disabled
     ).toBe(false);
-    await act(async () => finishAvailability({ codex: true, anthropic: false }));
+    await act(async () => finishAvailability({ codex: true, anthropic: false, agy: false }));
     expect(codex.disabled).toBe(false);
     expect(claude.disabled).toBe(true);
     expect(host.textContent).toContain('Claude Code is unavailable.');
@@ -298,7 +337,7 @@ describe('external prompt freshness and clipboard fallback', () => {
       getConnectionInfo: vi.fn(async () => snapshot()),
       retryConnection: vi.fn(),
       directRun: {
-        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false })),
+        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false, agy: false })),
         getSnapshot: vi.fn(async () => null),
         start: vi.fn(),
         cancel: vi.fn(),
@@ -471,7 +510,7 @@ describe('external prompt freshness and clipboard fallback', () => {
         .mockResolvedValue(live),
       retryConnection: vi.fn(),
       directRun: {
-        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false })),
+        getAvailability: vi.fn(async () => ({ codex: false, anthropic: false, agy: false })),
         getSnapshot: vi.fn(async () => null),
         start: vi.fn(),
         cancel: vi.fn(),

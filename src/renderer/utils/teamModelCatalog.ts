@@ -52,7 +52,7 @@ export const GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON =
 const TEAM_PROVIDER_LABELS: Record<SupportedProviderId, string> = {
   anthropic: 'Anthropic',
   codex: 'Codex',
-  gemini: 'Gemini',
+  gemini: 'Antigravity / Gemini',
   opencode: 'OpenCode',
 };
 
@@ -73,36 +73,25 @@ const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
   'claude-opus-4-7[1m]',
 ] as const;
 
+/* prettier-ignore */
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   default: 'Default',
   ...ANTHROPIC_ALIAS_LABELS,
-  'claude-fable-5': 'Fable 5',
-  'claude-mythos-5': 'Mythos 5',
-  'claude-sonnet-5': 'Sonnet 5',
-  'opus[1m]': 'Opus 4.8 (1M)',
-  'sonnet[1m]': 'Sonnet 4.6 (1M)',
-  'claude-opus-4-8': 'Opus 4.8',
-  'claude-opus-4-8[1m]': 'Opus 4.8 (1M)',
-  'claude-opus-4-7': 'Opus 4.7',
-  'claude-opus-4-7[1m]': 'Opus 4.7 (1M)',
-  'claude-sonnet-4-6': 'Sonnet 4.6',
-  'claude-sonnet-4-6[1m]': 'Sonnet 4.6 (1M)',
-  'claude-opus-4-6': 'Opus 4.6',
-  'claude-opus-4-6[1m]': 'Opus 4.6 (1M)',
-  'claude-haiku-4-5': 'Haiku 4.5',
-  'claude-haiku-4-5-20251001': 'Haiku 4.5',
-  'gpt-5.4': 'GPT-5.4',
-  'gpt-5.5': 'GPT-5.5',
-  'gpt-5.4-mini': 'GPT-5.4 Mini',
-  'gpt-5.3-codex': 'GPT-5.3 Codex',
-  'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
-  'gpt-5.2': 'GPT-5.2',
-  'gpt-5.2-codex': 'GPT-5.2 Codex',
-  'gpt-5.1-codex-mini': 'GPT-5.1 Codex Mini',
-  'gpt-5.1-codex-max': 'GPT-5.1 Codex Max',
-  'gemini-2.5-pro': 'Gemini 2.5 Pro',
-  'gemini-2.5-flash': 'Gemini 2.5 Flash',
-  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
+  'claude-fable-5': 'Fable 5', 'claude-mythos-5': 'Mythos 5', 'claude-sonnet-5': 'Sonnet 5',
+  'opus[1m]': 'Opus 4.8 (1M)', 'sonnet[1m]': 'Sonnet 4.6 (1M)',
+  'claude-opus-4-8': 'Opus 4.8', 'claude-opus-4-8[1m]': 'Opus 4.8 (1M)',
+  'claude-opus-4-7': 'Opus 4.7', 'claude-opus-4-7[1m]': 'Opus 4.7 (1M)',
+  'claude-sonnet-4-6': 'Sonnet 4.6', 'claude-sonnet-4-6[1m]': 'Sonnet 4.6 (1M)',
+  'claude-opus-4-6': 'Opus 4.6', 'claude-opus-4-6[1m]': 'Opus 4.6 (1M)',
+  'claude-haiku-4-5': 'Haiku 4.5', 'claude-haiku-4-5-20251001': 'Haiku 4.5',
+  'gpt-5.4': 'GPT-5.4', 'gpt-5.5': 'GPT-5.5', 'gpt-5.4-mini': 'GPT-5.4 Mini',
+  'gpt-5.3-codex': 'GPT-5.3 Codex', 'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
+  'gpt-5.2': 'GPT-5.2', 'gpt-5.2-codex': 'GPT-5.2 Codex',
+  'gpt-5.1-codex-mini': 'GPT-5.1 Codex Mini', 'gpt-5.1-codex-max': 'GPT-5.1 Codex Max',
+  'gemini-4-argon-high': 'Gemini 4 Argon High', 'gemini-4-argon-medium': 'Gemini 4 Argon Medium',
+  'gemini-4-argon-low': 'Gemini 4 Argon Low', 'gemini-3.8-flash-high': 'Gemini 3.8 Flash High',
+  'gemini-3.8-flash-medium': 'Gemini 3.8 Flash Medium', 'gemini-3.8-flash-low': 'Gemini 3.8 Flash Low',
+  'gemini-2.5-pro': 'Gemini 2.5 Pro', 'gemini-2.5-flash': 'Gemini 2.5 Flash', 'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
 };
 
 const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProviderModelOption[]> =
@@ -146,6 +135,20 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
     ],
     gemini: [
       { value: '', label: 'Default', badgeLabel: 'Default' },
+      { value: 'gemini-4-argon-high', label: 'Gemini 4 Argon High', badgeLabel: '4-argon-high' },
+      { value: 'gemini-4-argon-medium', label: 'Gemini 4 Argon Medium', badgeLabel: '4-argon-med' },
+      { value: 'gemini-4-argon-low', label: 'Gemini 4 Argon Low', badgeLabel: '4-argon-low' },
+      {
+        value: 'gemini-3.8-flash-high',
+        label: 'Gemini 3.8 Flash High',
+        badgeLabel: '3.8-flash-high',
+      },
+      {
+        value: 'gemini-3.8-flash-medium',
+        label: 'Gemini 3.8 Flash Medium',
+        badgeLabel: '3.8-flash-med',
+      },
+      { value: 'gemini-3.8-flash-low', label: 'Gemini 3.8 Flash Low', badgeLabel: '3.8-flash-low' },
       { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badgeLabel: '2.5-pro' },
       { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badgeLabel: '2.5-flash' },
       {

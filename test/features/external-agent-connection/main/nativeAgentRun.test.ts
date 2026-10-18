@@ -25,6 +25,9 @@ vi.mock('@main/services/infrastructure/codexAppServer/CodexBinaryResolver', () =
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolveNative: async () => '/sandbox/bin/claude' },
 }));
+vi.mock('@main/services/team/AgyBinaryResolver', () => ({
+  AgyBinaryResolver: { resolve: async () => '/sandbox/bin/agy' },
+}));
 vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
   resolveAgentTeamsMcpLaunchSpec: async () => ({
     command: '/sandbox/bin/mcp-node',
@@ -45,6 +48,8 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
 vi.mock('node:fs/promises', () => ({
   mkdtemp: async () => '/sandbox/native-run-temp',
   rm: vi.fn(async () => {}),
+  mkdir: vi.fn(async () => {}),
+  writeFile: vi.fn(async () => {}),
 }));
 vi.mock('@main/utils/childProcess', () => ({
   spawnCli: vi.fn(),
@@ -269,6 +274,48 @@ describe('native one-shot provider transport', () => {
     child.close(0);
     expect(await result).toEqual({ successful: true });
     expect(output.join('\n')).toContain('Привет');
+    await runtime.dispose();
+  });
+
+  it('generates stream-json and print arguments for AGY', () => {
+    const args = nativeAgentRunArgs('agy', connection);
+    expect(args).toEqual([
+      '--input-format',
+      'stream-json',
+      '--output-format',
+      'stream-json',
+      '--dangerously-skip-permissions',
+      '--disable-slash-commands',
+      '--print=',
+    ]);
+  });
+
+  it('runs AGY with NDJSON stdin, writes workspace MCP config, and verifies result success', async () => {
+    const runtime = await prepareNativeAgentRun('agy', connection);
+    const output: string[] = [];
+    const result = runtime.launch('Sandbox AGY request', (text) => output.push(text));
+    const [binary, args, options] = vi.mocked(spawnCli).mock.calls[0];
+    expect(binary).toBe('/sandbox/bin/agy');
+    expect(args).toContain('--input-format');
+    expect(args).toContain('stream-json');
+    expect(options?.cwd).toBe('/sandbox/native-run-temp');
+    expect(child.stdin.read()?.toString()).toBe(
+      JSON.stringify({ event: 'user', message: { content: 'Sandbox AGY request' } }) + '\n'
+    );
+    child.stdout.write('{"event":"init","conversation_id":"test-conv"}\n');
+    child.stdout.write('{"event":"result","result":{"status":"SUCCESS","response":"Done"}}\n');
+    child.close(0);
+    expect(await result).toEqual({ successful: true });
+    expect(output.join('\n')).toContain('"status":"SUCCESS"');
+    await runtime.dispose();
+  });
+
+  it('fails AGY when result status is not SUCCESS', async () => {
+    const runtime = await prepareNativeAgentRun('agy', connection);
+    const result = runtime.launch('Sandbox AGY request', () => {});
+    child.stdout.write('{"event":"result","result":{"status":"ERROR","message":"Failed"}}\n');
+    child.close(0);
+    expect(await result).toEqual({ successful: false });
     await runtime.dispose();
   });
 });

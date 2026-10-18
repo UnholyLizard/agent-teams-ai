@@ -53,7 +53,7 @@ function validateRequest(input: unknown): ExternalAgentRunRequest {
   const expected = value.expectedContext as Record<string, unknown> | undefined;
   if (
     Object.keys(value).some((key) => !['providerId', 'task', 'expectedContext'].includes(key)) ||
-    !['anthropic', 'codex'].includes(String(value.providerId)) ||
+    !['anthropic', 'codex', 'agy'].includes(String(value.providerId)) ||
     typeof value.task !== 'string' ||
     !value.task.trim() ||
     value.task.length > EXTERNAL_AGENT_RUN_MAX_TASK_LENGTH ||
